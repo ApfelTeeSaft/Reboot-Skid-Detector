@@ -29,10 +29,11 @@
 <!-- ABOUT Raax-OG-FN -->
 ## About Reboot-Skid-Detector
 
-Out the box, Reboot-Skid-Detector comes with some stand out features that make it the perfect base.
+Out the box, Reboot-Skid-Detector comes with some stand out features that make it the perfect tool to detect Skids.
 - Automatic offset and VFT index updating
 - Compile time string encryption ([skCrypter](https://github.com/skadro-official/skCrypter))
 - Windows API function hiding ([LazyImporter](https://github.com/JustasMasiulis/lazy_importer))
+- RebootV3 specific Exploits
 
 
 
