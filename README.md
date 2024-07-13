@@ -2,31 +2,24 @@
 <p align="center">
 	<img align="center" src="https://i.imgur.com/LbbSQUq.png" alt="Logo" width="235" height="140">
 </p>
-<p align="center">Raax-OG-FN, a universal, internal Fortnite cheat.</p>
+<p align="center">Reboot Skid Detector, a universal, internal Fortnite Tool.</p>
 <p align="center">If you found this useful, join the Discord and star the project!</p>
 <p align="center">THIS IS STILL UNDER DEVELOPMENT, LOTS OF THE CODE IS STILL SCUFFED AND WILL BE CHANGED LATER!</p>
 <p align="center">
-	<a href="https://discord.gg/Usbk5fjZmH">Discord Server</a> |
-	<a href="https://github.com/raax7/OG-Fortnite-Cheat/issues">Report an Issue</a>
+	<a href="https://discord.gg/lunarmp">Discord Server</a> |
+	<a href="https://github.com/apfelteesaft/reboot-skid-detector/issues">Report an Issue</a>
 </p>
 <p align="center">
-    <img alt="Release" src="https://img.shields.io/github/v/release/raax7/OG-Fortnite-Cheat?color=blue&style=for-the-badge">
-    <img alt="Stars" src="https://img.shields.io/github/stars/raax7/OG-Fortnite-Cheat?color=blue&style=for-the-badge">
+    <img alt="Release" src="https://img.shields.io/github/v/release/apfelteesaft/reboot-skid-detector?color=blue&style=for-the-badge">
+    <img alt="Stars" src="https://img.shields.io/github/stars/apfelteesaft/reboot-skid-detector?color=blue&style=for-the-badge">
 </p>
-
-
-<!-- VIDEO CLIP -->
-## Video Clip
-
-Clip from me on EZFN:
-https://streamable.com/e/75g4ic
 
 
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
 <ol>
-    <li><a href="#about-raax-og-fn">About Raax-OG-FN</a></li>
+    <li><a href="#about-raax-og-fn">About Reboot-Skid-Detector</a></li>
     <li><a href="#how-it-works">How it works</a></li>
     <li><a href="#developers-read-me">Developers Read Me!</a></li>
     <li><a href="#license">License</a></li>
@@ -34,9 +27,9 @@ https://streamable.com/e/75g4ic
 
 
 <!-- ABOUT Raax-OG-FN -->
-## About Raax-OG-FN
+## About Reboot-Skid-Detector
 
-Out the box, Raax-OG-FN comes with some stand out features that make it the perfect base.
+Out the box, Reboot-Skid-Detector comes with some stand out features that make it the perfect base.
 - Automatic offset and VFT index updating
 - Compile time string encryption ([skCrypter](https://github.com/skadro-official/skCrypter))
 - Windows API function hiding ([LazyImporter](https://github.com/JustasMasiulis/lazy_importer))
@@ -68,7 +61,7 @@ I take advantage of wrappers and abstraction alot here, so most of the time like
 ### Overall
 Overall, just explore the project. There is already tons of code using everything how I intended so you can simply follow that style
 
-
+# Credits to Raax for the Base!
 
 <!-- LICENSE -->
 ## License
