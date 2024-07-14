@@ -123,6 +123,11 @@ namespace Config {
 			inline bool DoublePump = false;
 		}
 
+		namespace Server {
+			inline std::string newServerName = "Default";
+			inline bool NullifyClientReturnToMainMenu = false;
+		}
+
 		namespace Weapon {
 			inline bool NoSpread = false;
 			inline bool NoRecoil = false;

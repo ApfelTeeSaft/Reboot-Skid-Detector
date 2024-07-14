@@ -12,6 +12,8 @@
 #include "../Configs/Config.h"
 #include "../External-Libs/minhook/include/MinHook.h"
 
+#include "Callbacks/ClientReturnToMainMenu.cpp"
+
 template <typename T>
 Hooks::VFTHook::VFTHook(void** VFT, const uintptr_t VFTIndex, T& Original, void* Hook) {
 	DEBUG_LOG(LOG_INFO, std::string(skCrypt("Create VFTHook called")));
@@ -102,6 +104,17 @@ void Hooks::Init() {
 	MH_STATUS InitStats = MH_Initialize();
 	if (InitStats != MH_OK && InitStats != MH_ERROR_ALREADY_INITIALIZED) {
 		THROW_ERROR(std::string(skCrypt("Failed to init MinHook!")), true);
+	}
+
+	if (SDK::Cached::VFT::ClientReturnToMainMenu && SDK::IsValidPointer(SDK::GetEngine()->GameViewport())) {
+		ClientReturnToMainMenu::Hook = new Hooks::VFTHook(
+			SDK::GetEngine()->GameViewport()->Vft,
+			SDK::Cached::VFT::ClientReturnToMainMenu,
+			Hooks::ClientReturnToMainMenu::ClientReturnToMainMenuOriginal,
+			Hooks::ClientReturnToMainMenu::hkClientReturnToMainMenu);
+	}
+	else {
+		THROW_ERROR(std::string(skCrypt("Failed to hook ClientReturnToMainMenu!")), true);
 	}
 
 	if (SDK::Cached::VFT::DrawTransition && SDK::IsValidPointer(SDK::GetEngine()->GameViewport())) {

@@ -54,6 +54,7 @@ namespace SDK {
 				inline uintptr_t VehicleStateLocal = -0x1;
 				inline uintptr_t ZiplineState = -0x1;
 				inline uintptr_t CharacterPartSkeletalMeshComponents = -0x1;
+				inline uintptr_t ClientReturnToMainMenu = -0x1; //no idea where to put this lol
 			}
 
 			namespace FortPlayerPawnAthena {
