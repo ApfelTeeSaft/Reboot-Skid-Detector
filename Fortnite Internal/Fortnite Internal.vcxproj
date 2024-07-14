@@ -112,11 +112,14 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
       <UseFullPaths>false</UseFullPaths>
+      <AdditionalIncludeDirectories>$(ProjectDir)Utilities\pcap\Include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>wpcap.lib;Packet.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)Utilities\pcap\Lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -141,11 +144,14 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
       <UseFullPaths>false</UseFullPaths>
+      <AdditionalIncludeDirectories>$(ProjectDir)Utilities\pcap\Include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>wpcap.lib;Packet.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)Utilities\pcap\Lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -174,6 +180,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalOptions>/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
       <UseFullPaths>false</UseFullPaths>
+      <AdditionalIncludeDirectories>$(ProjectDir)Utilities\pcap\Include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -185,8 +192,8 @@
       </EntryPointSymbol>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)Utilities\pcap\Lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>wpcap.lib;Packet.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -214,6 +221,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Sync</ExceptionHandling>
       <UseFullPaths>false</UseFullPaths>
+      <AdditionalIncludeDirectories>$(ProjectDir)Utilities\pcap\Include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -225,8 +233,8 @@
       </EntryPointSymbol>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)Utilities\pcap\Lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>wpcap.lib;Packet.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
@@ -569,6 +577,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_Engine|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_ImGui|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Utilities\pcap.h" />
     <ClInclude Include="Utilities\RaaxAssert.h" />
     <ClInclude Include="Utilities\ReturnMutex.h" />
     <ClInclude Include="Utilities\Error.h" />

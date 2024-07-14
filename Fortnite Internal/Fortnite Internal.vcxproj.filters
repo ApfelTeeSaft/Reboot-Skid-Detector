@@ -398,5 +398,6 @@
     <ClInclude Include="Utilities\RaaxAssert.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Utilities\pcap.h" />
   </ItemGroup>
 </Project>

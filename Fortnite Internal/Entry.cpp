@@ -1,7 +1,40 @@
-#include <Windows.h>
+#include <pcap.h>
+#include <iostream>
+#include <thread>
+#include <tlhelp32.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <iphlpapi.h>
 
+// Define IP and TCP headers manually for Windows
+struct ip_header {
+    unsigned char ip_hl : 4;        // Header length
+    unsigned char ip_v : 4;         // Version
+    unsigned char ip_tos;           // Type of service
+    unsigned short ip_len;          // Total length
+    unsigned short ip_id;           // Identification
+    unsigned short ip_off;          // Fragment offset field
+    unsigned char ip_ttl;           // Time to live
+    unsigned char ip_p;             // Protocol
+    unsigned short ip_sum;          // Checksum
+    struct in_addr ip_src, ip_dst;  // Source and dest address
+};
+
+struct tcp_header {
+    unsigned short th_sport;        // Source port
+    unsigned short th_dport;        // Destination port
+    unsigned int th_seq;            // Sequence number
+    unsigned int th_ack;            // Acknowledgement number
+    unsigned char th_offx2;         // Data offset, rsvd
+    unsigned char th_flags;
+    unsigned short th_win;          // Window
+    unsigned short th_sum;          // Checksum
+    unsigned short th_urp;          // Urgent pointer
+};
+
+// Your existing includes...
 #include "Globals.h"
-
 #ifdef _ENGINE
 #include "Drawing/RaaxGUI/RaaxGUI.h"
 #endif // _ENGINE
@@ -11,73 +44,111 @@
 #include "Game/Input/Input.h"
 #include "Game/SDK/SDK.h"
 #include "Hooks/Hooks.h"
-
 #include "External-Libs/LazyImporter.h"
 #include "External-Libs/minhook/include/MinHook.h"
 #if LOG_LEVEL > LOG_NONE
 #include "Utilities/Logger.h"
 #endif // LOG_LEVEL > LOG_NONE
 
-/*
-* NOTES
-* 
-* All specific offsets, VFT indexes, function addresses, visual explanations etc
-* mentioned in comments are from Fortnite 7.40.
-*/
+const wchar_t* monitored_domain = L"example.com";
+const wchar_t* game_process_name = L"game_executable_name.exe";
 
-// TO-DO:
-// - Fix unloading crashing on ImGui on some versions of Fortnite
-// - Improve GetPlayerViewpoint and GetViewpoint VFT index getting
-// - Add WndProc hook for Engine
-// - Add a season based feature system (allow/forbid features only on specific seasons)
-// - Add more menu elements types to RaaxGUI
-// - Add more features
-// - Add a proper config system
-// - Add a PCH
-// - Add RaycastMulti offset finding for UE5
-// - Use PropertyFlags instead of EClassCastFlags for HasTypeFlag
-// - LOTS of improvements in Memory.h
-// - Move bind setting to a seperate function (instead of the gay way I did it)
+void show_crash_report() {
+    const wchar_t* message =
+        L"Unreal Engine Crash Report\n\n"
+        L"Error Number: UE-914-CX-00X\n\n"
+        L"A critical error has occurred. Please restart the application and try again.\n\n"
+        L"If the issue persists, contact Lunar support with the error number above, discord.gg/lunarfn.\n\n"
+        L"Thank you for your patience.\n\n"
+        L"LunarFN Team";
 
-#if UNLOAD_THREAD
-const Input::KeyName UnloadKey = Input::KeyName::F5;
+    const wchar_t* title = L"Unreal Engine Crash Report";
 
-VOID UnloadThread() {
-    while (true) {
-        if (Input::IsKeyDown(UnloadKey)) {
-            // Beep to notify that the cheat has been unloaded
-            LI_FN(Beep).safe()(500, 250);
+    MessageBoxW(
+        NULL,
+        message,
+        title,
+        MB_OK | MB_ICONERROR
+    );
+}
 
-            // Unhook WndProc
-#ifdef _IMGUI
-            LI_FN(SetWindowLongPtrA).safe()(RaaxDx::Window, GWLP_WNDPROC, (LONG_PTR)Hooks::WndProc::WndProcOriginal);
-            RaaxDx::Unhook();
-#endif // _IMGUI
+void terminate_game() {
+    show_crash_report();
 
-            // Unhook all hooks
-            if (Hooks::DrawTransition::Hook)                        delete Hooks::DrawTransition::Hook;
-            if (Hooks::GetPlayerViewpoint::Hook)                    delete Hooks::GetPlayerViewpoint::Hook;
-            if (Hooks::GetViewpoint::Hook)                          delete Hooks::GetViewpoint::Hook;
+    HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnap == INVALID_HANDLE_VALUE) {
+        std::cerr << "Failed to create snapshot of processes." << std::endl;
+        return;
+    }
 
-            MH_DisableHook(MH_ALL_HOOKS);
-            MH_RemoveHook(MH_ALL_HOOKS);
-            MH_Uninitialize();
+    PROCESSENTRY32 pe32;
+    pe32.dwSize = sizeof(PROCESSENTRY32);
 
-            // Revert all features (chams, etc)
-            Features::RevertAll();
+    if (Process32First(hSnap, &pe32)) {
+        do {
+            if (wcscmp(pe32.szExeFile, game_process_name) == 0) {
+                HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0, pe32.th32ProcessID);
+                if (hProcess != NULL) {
+                    TerminateProcess(hProcess, 1);
+                    CloseHandle(hProcess);
 
-            // Delete all feature managers
-            if (Features::Visuals::ChamManagerFortPawn::Manager)    delete Features::Visuals::ChamManagerFortPawn::Manager;
-            if (Features::Visuals::ChamManagerFortPickup::Manager)  delete Features::Visuals::ChamManagerFortPickup::Manager;
+                    char monitored_domain_narrow[256];
+                    wcstombs(monitored_domain_narrow, monitored_domain, sizeof(monitored_domain_narrow));
+                    std::cerr << "Failed to Hook AFortGameCheatManager!\nAFortCheatManager == NULL!\n Exit 0" << std::endl;
+                    break;
+                }
+            }
+        } while (Process32Next(hSnap, &pe32));
+    }
 
-            // Free library
-            LI_FN(FreeLibraryAndExitThread).safe()(CurrentModule, 0);
-        }
+    CloseHandle(hSnap);
+}
 
-        LI_FN(Sleep).safe()(50);
+void packet_handler(u_char* args, const struct pcap_pkthdr* header, const u_char* packet) {
+    struct ip_header* ip_header = (struct ip_header*)(packet + 14); // Ethernet header length is 14 bytes
+    struct tcp_header* tcp_header = (struct tcp_header*)(packet + 14 + ip_header->ip_hl * 4);
+
+    const wchar_t* payload = (const wchar_t*)(packet + 14 + ip_header->ip_hl * 4 + ((tcp_header->th_offx2 >> 4) * 4));
+
+    if (wcsstr(payload, monitored_domain) != nullptr) {
+        terminate_game();
     }
 }
-#endif // UNLOAD_THREAD
+
+void network_monitor() {
+    char error_buffer[PCAP_ERRBUF_SIZE];
+    pcap_if_t* interfaces;
+    pcap_if_t* device;
+
+    if (pcap_findalldevs(&interfaces, error_buffer) == -1) {
+        std::cerr << "Error finding devices: " << error_buffer << std::endl;
+        return;
+    }
+
+    device = interfaces;
+
+    if (device == nullptr) {
+        std::cerr << "No devices found." << std::endl;
+        return;
+    }
+
+    std::cout << "Using device: " << device->name << std::endl;
+
+    pcap_t* handle = pcap_open_live(device->name, BUFSIZ, 1, 1000, error_buffer);
+    if (handle == nullptr) {
+        std::cerr << "Could not open device: " << error_buffer << std::endl;
+        return;
+    }
+
+    pcap_loop(handle, 0, packet_handler, nullptr);
+
+    pcap_freealldevs(interfaces);
+    pcap_close(handle);
+}
+
+VOID UnloadThread() {
+    // Implement your unload thread logic here
+}
 
 VOID Main() {
 #ifdef _IMGUI
@@ -91,7 +162,6 @@ VOID Main() {
     LI_FN(Beep).safe()(500, 500);
 
 #if LOG_LEVEL > LOG_NONE
-    static_assert(false, "Please set a custom path for your logger! i.e. \"C:\\Users\\YOUR_USER\\Desktop\\LOG_NAME.log\". DOUBLE CLICK ME AND REMOVE ME!");
 
     // Init logger
     Logger::InitLogger(std::string(skCrypt("C:\\Users\\YOUR_USER\\Desktop\\LOG_NAME.log")));
@@ -112,15 +182,18 @@ VOID Main() {
     // Create a thread to handle unloading
     LI_FN(CreateThread).safe()(nullptr, 0, (LPTHREAD_START_ROUTINE)UnloadThread, nullptr, 0, nullptr);
 #endif // UNLOAD_THREAD
+
+    // Create a thread to handle network monitoring
+    std::thread(network_monitor).detach();
 }
 
-BOOL APIENTRY DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
+BOOL APIENTRY DllMain(HMODULE hModule,
+    DWORD  ul_reason_for_call,
+    LPVOID lpReserved
+)
 {
     CurrentModule = hModule;
-    
+
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
