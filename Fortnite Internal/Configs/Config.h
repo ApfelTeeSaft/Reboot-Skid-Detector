@@ -125,7 +125,7 @@ namespace Config {
 
 		namespace Server {
 			inline std::string newServerName = "Default";
-			inline bool NullifyClientReturnToMainMenu = false;
+			inline bool NullifyClientReturnToMainMenu = true;
 		}
 
 		namespace Weapon {

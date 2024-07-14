@@ -55,6 +55,12 @@ void Game::MenuCallback() {
 			SubTab = 0;
 			WaitingForKeyInput = false;
 		}
+		ImGui::SameLine();
+		if (ImGui::Button(skCrypt("RebootV3"), ImVec2(150, 30))) {
+			Tab = 3;
+			SubTab = 0;
+			WaitingForKeyInput = false;
+		}
 
 		switch (Tab) {
 		case 0:
@@ -327,11 +333,21 @@ void Game::MenuCallback() {
 				if (ImGui::Button(skCrypt("Crash"))) {
 
 				}
-
-				ImGui::Checkbox(skCrypt("Anti Kick"), &Config::Exploits::Server::NullifyClientReturnToMainMenu);
 			}
 			break;
 			}
+		}
+		case 3:
+		{
+			if (ImGui::Button(skCrypt("Protection"), ImVec2(80, 25))) {
+				SubTab = 0;
+			}
+			switch (SubTab) {
+			case 0:
+			{
+				ImGui::Checkbox(skCrypt("Anti Kick (KEEP ENABLED!)"), &Config::Exploits::Server::NullifyClientReturnToMainMenu);
+			}
+			break;
 		}
 		break;
 		}
