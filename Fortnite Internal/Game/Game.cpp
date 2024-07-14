@@ -327,6 +327,8 @@ void Game::MenuCallback() {
 				if (ImGui::Button(skCrypt("Crash"))) {
 
 				}
+
+				ImGui::Checkbox(skCrypt("Anti Kick"), &Config::Exploits::Server::NullifyClientReturnToMainMenu);
 			}
 			break;
 			}

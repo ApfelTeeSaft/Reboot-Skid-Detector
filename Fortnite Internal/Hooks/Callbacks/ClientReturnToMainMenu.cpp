@@ -12,5 +12,6 @@ void __fastcall hkClientReturnToMainMenu() {
     }
     else {
         // Call the original function, idk what it is tho lol so KEEP IT ON FFS!
+        exit;
     }
 }
