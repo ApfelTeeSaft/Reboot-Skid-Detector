@@ -234,6 +234,10 @@ namespace SDK {
 			namespace FortPlayerStateZone {
 				inline uintptr_t SpectatingTarget = -0x1;
 			}
+
+			namespace ClientReturnToMainMenu {
+				inline uintptr_t ClientReturnToMainMenu = -0x1;
+			}
 		}
 
 		namespace Functions {

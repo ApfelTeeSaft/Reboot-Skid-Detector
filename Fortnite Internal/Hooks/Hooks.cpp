@@ -1,313 +1,325 @@
 #include "Hooks.h"
-
 #include "../Game/SDK/SDK.h"
 #include "../Game/SDK/Classes/Engine_Classes.h"
 #include "../Game/SDK/Classes/FortniteGame_Classes.h"
-
 #include "../External-Libs/LazyImporter.h"
-
 #include "../Utilities/Logger.h"
 #include "../Utilities/Error.h"
-
 #include "../Configs/Config.h"
 #include "../External-Libs/minhook/include/MinHook.h"
-
-#include "Callbacks/ClientReturnToMainMenu.cpp"
+#include <iostream>  // Add this for std::cout and std::endl
 
 template <typename T>
 Hooks::VFTHook::VFTHook(void** VFT, const uintptr_t VFTIndex, T& Original, void* Hook) {
-	DEBUG_LOG(LOG_INFO, std::string(skCrypt("Create VFTHook called")));
+    DEBUG_LOG(LOG_INFO, std::string(skCrypt("Create VFTHook called")));
 
-	DWORD OldProtection = 0;
+    DWORD OldProtection = 0;
 
-	BOOL ProtectSucceeded = LI_FN(VirtualProtect).safe()(&VFT[VFTIndex], sizeof(void*), PAGE_EXECUTE_READWRITE, &OldProtection);
-	if (ProtectSucceeded == FALSE) {
-		DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to set protection (1) on constructor for VFTIndex: ")) + std::to_string(VFTIndex));
-		return;
-	}
+    BOOL ProtectSucceeded = LI_FN(VirtualProtect).safe()(&VFT[VFTIndex], sizeof(void*), PAGE_EXECUTE_READWRITE, &OldProtection);
+    if (ProtectSucceeded == FALSE) {
+        DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to set protection (1) on constructor for VFTIndex: ")) + std::to_string(VFTIndex));
+        return;
+    }
 
-	// Query the memory to validate the protection change
-	MEMORY_BASIC_INFORMATION Mbi;
-	ZeroMemory(&Mbi, sizeof(MEMORY_BASIC_INFORMATION));
-	size_t VirtualQuerySize = LI_FN(VirtualQuery).safe()(&VFT[VFTIndex], &Mbi, sizeof(MEMORY_BASIC_INFORMATION));
-	if (VirtualQuerySize == sizeof(MEMORY_BASIC_INFORMATION)) {
-		if ((Mbi.State == MEM_COMMIT && Mbi.Protect & PAGE_EXECUTE_READWRITE) == false) {
-			DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to set protection (2) on constructor for VFTIndex: ")) + std::to_string(VFTIndex));
-			return;
-		}
-	}
-	else {
-		DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to query memory on constructor for VFTIndex: ")) + std::to_string(VFTIndex));
-		return;
-	}
+    // Query the memory to validate the protection change
+    MEMORY_BASIC_INFORMATION Mbi;
+    ZeroMemory(&Mbi, sizeof(MEMORY_BASIC_INFORMATION));
+    size_t VirtualQuerySize = LI_FN(VirtualQuery).safe()(&VFT[VFTIndex], &Mbi, sizeof(MEMORY_BASIC_INFORMATION));
+    if (VirtualQuerySize == sizeof(MEMORY_BASIC_INFORMATION)) {
+        if ((Mbi.State == MEM_COMMIT && Mbi.Protect & PAGE_EXECUTE_READWRITE) == false) {
+            DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to set protection (2) on constructor for VFTIndex: ")) + std::to_string(VFTIndex));
+            return;
+        }
+    }
+    else {
+        DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to query memory on constructor for VFTIndex: ")) + std::to_string(VFTIndex));
+        return;
+    }
 
-	Original = reinterpret_cast<T>(VFT[VFTIndex]);
-	VFT[VFTIndex] = Hook;
+    Original = reinterpret_cast<T>(VFT[VFTIndex]);
+    VFT[VFTIndex] = Hook;
 
-	ProtectSucceeded = LI_FN(VirtualProtect).safe()(&VFT[VFTIndex], sizeof(void*), OldProtection, &OldProtection);
-	if (ProtectSucceeded == FALSE) {
-		DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to set protection on constructor VFTIndex: ")) + std::to_string(VFTIndex));
-		return;
-	}
+    ProtectSucceeded = LI_FN(VirtualProtect).safe()(&VFT[VFTIndex], sizeof(void*), OldProtection, &OldProtection);
+    if (ProtectSucceeded == FALSE) {
+        DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to set protection on constructor VFTIndex: ")) + std::to_string(VFTIndex));
+        return;
+    }
 
-	this->VFT = VFT;
-	this->VFTIndex = VFTIndex;
-	this->Original = Original;
+    this->VFT = VFT;
+    this->VFTIndex = VFTIndex;
+    this->Original = Original;
 
-	DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked VFTIndex: ")) + std::to_string(VFTIndex));
+    DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked VFTIndex: ")) + std::to_string(VFTIndex));
 }
+
 Hooks::VFTHook::~VFTHook() {
-	DEBUG_LOG(LOG_INFO, std::string(skCrypt("Destroy VFTHook called")));
+    DEBUG_LOG(LOG_INFO, std::string(skCrypt("Destroy VFTHook called")));
 
-	if (VFT == nullptr || Original == nullptr) {
-		DEBUG_LOG(LOG_INFO, std::string(skCrypt("Failed to destroy hook! VFT or Original is nullptr")));
-		return;
-	}
+    if (VFT == nullptr || Original == nullptr) {
+        DEBUG_LOG(LOG_INFO, std::string(skCrypt("Failed to destroy hook! VFT or Original is nullptr")));
+        return;
+    }
 
-	DWORD OldProtection = PAGE_NOACCESS;
+    DWORD OldProtection = PAGE_NOACCESS;
 
-	BOOL ProtectSucceeded = LI_FN(VirtualProtect).safe()(VFT[VFTIndex], sizeof(void*), PAGE_EXECUTE_READWRITE, &OldProtection);
-	if (ProtectSucceeded == FALSE) {
-		DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to revert protection (1) on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
-		return;
-	}
+    BOOL ProtectSucceeded = LI_FN(VirtualProtect).safe()(VFT[VFTIndex], sizeof(void*), PAGE_EXECUTE_READWRITE, &OldProtection);
+    if (ProtectSucceeded == FALSE) {
+        DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to revert protection (1) on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
+        return;
+    }
 
-	// Query the memory to validate the protection change
-	MEMORY_BASIC_INFORMATION Mbi;
-	ZeroMemory(&Mbi, sizeof(MEMORY_BASIC_INFORMATION));
-	size_t VirtualQuerySize = LI_FN(VirtualQuery).safe()(&VFT[VFTIndex], &Mbi, sizeof(MEMORY_BASIC_INFORMATION));
-	if (VirtualQuerySize == sizeof(MEMORY_BASIC_INFORMATION)) {
-		if ((Mbi.State == MEM_COMMIT && Mbi.Protect & PAGE_EXECUTE_READWRITE) == false) {
-			DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to revert protection (2) on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
-			return;
-		}
-	}
-	else {
-		DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to query memory on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
-		return;
-	}
+    // Query the memory to validate the protection change
+    MEMORY_BASIC_INFORMATION Mbi;
+    ZeroMemory(&Mbi, sizeof(MEMORY_BASIC_INFORMATION));
+    size_t VirtualQuerySize = LI_FN(VirtualQuery).safe()(&VFT[VFTIndex], &Mbi, sizeof(MEMORY_BASIC_INFORMATION));
+    if (VirtualQuerySize == sizeof(MEMORY_BASIC_INFORMATION)) {
+        if ((Mbi.State == MEM_COMMIT && Mbi.Protect & PAGE_EXECUTE_READWRITE) == false) {
+            DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to revert protection (2) on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
+            return;
+        }
+    }
+    else {
+        DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to query memory on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
+        return;
+    }
 
-	VFT[VFTIndex] = Original;
+    VFT[VFTIndex] = Original;
 
-	ProtectSucceeded = LI_FN(VirtualProtect).safe()(VFT[VFTIndex], sizeof(void*), OldProtection, &OldProtection);
-	if (ProtectSucceeded == FALSE) {
-		DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to revert protection on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
-		return;
-	}
+    ProtectSucceeded = LI_FN(VirtualProtect).safe()(VFT[VFTIndex], sizeof(void*), OldProtection, &OldProtection);
+    if (ProtectSucceeded == FALSE) {
+        DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to revert protection on destructor for VFTIndex: ")) + std::to_string(VFTIndex));
+        return;
+    }
 
-	DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked VFTIndex: ")) + std::to_string(VFTIndex));
+    DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked VFTIndex: ")) + std::to_string(VFTIndex));
+}
+
+void __stdcall Hooks::ClientReturnToMainMenu::hkClientReturnToMainMenu() {
+    // Your custom code here
+    std::cout << "Client is returning to the main menu!" << std::endl;
+
+    // Call the original function
+    if (ClientReturnToMainMenuOriginal) {
+        ClientReturnToMainMenuOriginal();
+    }
 }
 
 void Hooks::Init() {
-	DEBUG_LOG(LOG_INFO, std::string(skCrypt("Initializing Hooks...")));
+    DEBUG_LOG(LOG_INFO, std::string(skCrypt("Initializing Hooks...")));
 
-	MH_STATUS InitStats = MH_Initialize();
-	if (InitStats != MH_OK && InitStats != MH_ERROR_ALREADY_INITIALIZED) {
-		THROW_ERROR(std::string(skCrypt("Failed to init MinHook!")), true);
-	}
+    MH_STATUS InitStats = MH_Initialize();
+    if (InitStats != MH_OK && InitStats != MH_ERROR_ALREADY_INITIALIZED) {
+        THROW_ERROR(std::string(skCrypt("Failed to init MinHook!")), true);
+    }
 
-	if (SDK::Cached::VFT::ClientReturnToMainMenu && SDK::IsValidPointer(SDK::GetEngine()->GameViewport())) {
-		ClientReturnToMainMenu::Hook = new Hooks::VFTHook(
-			SDK::GetEngine()->GameViewport()->Vft,
-			SDK::Cached::VFT::ClientReturnToMainMenu,
-			Hooks::ClientReturnToMainMenu::ClientReturnToMainMenuOriginal,
-			Hooks::ClientReturnToMainMenu::hkClientReturnToMainMenu);
-	}
-	else {
-		THROW_ERROR(std::string(skCrypt("Failed to hook ClientReturnToMainMenu!")), true);
-	}
+    // Hook ClientReturnToMainMenu
+    if (SDK::Cached::Offsets::ClientReturnToMainMenu::ClientReturnToMainMenu && SDK::IsValidPointer(SDK::GetEngine()->GameViewport())) {
+        new Hooks::VFTHook(
+            SDK::GetEngine()->GameViewport()->Vft,
+            SDK::Cached::Offsets::ClientReturnToMainMenu::ClientReturnToMainMenu,
+            Hooks::ClientReturnToMainMenu::ClientReturnToMainMenuOriginal,
+            Hooks::ClientReturnToMainMenu::hkClientReturnToMainMenu);
+    }
+    else {
+        THROW_ERROR(std::string(skCrypt("Failed to hook ClientReturnToMainMenu!")), true);
+    }
 
-	if (SDK::Cached::VFT::DrawTransition && SDK::IsValidPointer(SDK::GetEngine()->GameViewport())) {
-		DrawTransition::Hook = new Hooks::VFTHook(
-			SDK::GetEngine()->GameViewport()->Vft,
-			SDK::Cached::VFT::DrawTransition,
-			Hooks::DrawTransition::DrawTransitionOriginal,
-			Hooks::DrawTransition::DrawTransition);
-	}
-	else {
-		THROW_ERROR(std::string(skCrypt("Failed to hook DrawTransition!")), true);
-	}
+    // Hook DrawTransition
+    if (SDK::Cached::VFT::DrawTransition && SDK::IsValidPointer(SDK::GetEngine()->GameViewport())) {
+        DrawTransition::Hook = new Hooks::VFTHook(
+            SDK::GetEngine()->GameViewport()->Vft,
+            SDK::Cached::VFT::DrawTransition,
+            Hooks::DrawTransition::DrawTransitionOriginal,
+            Hooks::DrawTransition::DrawTransition);
+    }
+    else {
+        THROW_ERROR(std::string(skCrypt("Failed to hook DrawTransition!")), true);
+    }
 
-	DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooks Initialized!")));
+    DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooks Initialized!")));
 }
+
 void Hooks::Tick() {
-	if (Config::Aimbot::SilentAim && SDK::Cached::VFT::GetPlayerViewpoint && SDK::Cached::VFT::GetViewpoint) {
-		SDK::APlayerController* PlayerController = SDK::GetLocalController();
-		if ((Hooks::GetPlayerViewpoint::Hook == nullptr || (Hooks::GetPlayerViewpoint::PlayerControllerHooked != PlayerController && PlayerController))
-			&& PlayerController->IsA(SDK::AFortPlayerController::StaticClass()) && SDK::GetLocalPawn()) {
-			if (Hooks::GetPlayerViewpoint::Hook) delete Hooks::GetPlayerViewpoint::Hook;
+    if (Config::Aimbot::SilentAim && SDK::Cached::VFT::GetPlayerViewpoint && SDK::Cached::VFT::GetViewpoint) {
+        SDK::APlayerController* PlayerController = SDK::GetLocalController();
+        if ((Hooks::GetPlayerViewpoint::Hook == nullptr || (Hooks::GetPlayerViewpoint::PlayerControllerHooked != PlayerController && PlayerController))
+            && PlayerController->IsA(SDK::AFortPlayerController::StaticClass()) && SDK::GetLocalPawn()) {
+            if (Hooks::GetPlayerViewpoint::Hook) delete Hooks::GetPlayerViewpoint::Hook;
 
-			Hooks::GetPlayerViewpoint::Hook = new Hooks::VFTHook(
-				*(void***)(PlayerController),
-				SDK::Cached::VFT::GetPlayerViewpoint,
-				Hooks::GetPlayerViewpoint::GetPlayerViewpointOriginal,
-				Hooks::GetPlayerViewpoint::GetPlayerViewpoint);
+            Hooks::GetPlayerViewpoint::Hook = new Hooks::VFTHook(
+                *(void***)(PlayerController),
+                SDK::Cached::VFT::GetPlayerViewpoint,
+                Hooks::GetPlayerViewpoint::GetPlayerViewpointOriginal,
+                Hooks::GetPlayerViewpoint::GetPlayerViewpoint);
 
-			Hooks::GetPlayerViewpoint::PlayerControllerHooked = PlayerController;
-		}
+            Hooks::GetPlayerViewpoint::PlayerControllerHooked = PlayerController;
+        }
 
-		SDK::ULocalPlayer* LocalPlayer = SDK::GetLocalPlayer();
-		if ((Hooks::GetViewpoint::Hook == nullptr || (Hooks::GetViewpoint::LocalPlayerHooked != LocalPlayer && LocalPlayer))
-			&& LocalPlayer->IsA(SDK::UFortLocalPlayer::StaticClass()) && SDK::GetLocalPawn()) {
-			if (Hooks::GetViewpoint::Hook) delete Hooks::GetViewpoint::Hook;
+        SDK::ULocalPlayer* LocalPlayer = SDK::GetLocalPlayer();
+        if ((Hooks::GetViewpoint::Hook == nullptr || (Hooks::GetViewpoint::LocalPlayerHooked != LocalPlayer && LocalPlayer))
+            && LocalPlayer->IsA(SDK::UFortLocalPlayer::StaticClass()) && SDK::GetLocalPawn()) {
+            if (Hooks::GetViewpoint::Hook) delete Hooks::GetViewpoint::Hook;
 
-			Hooks::GetViewpoint::Hook = new Hooks::VFTHook(
-				*(void***)(LocalPlayer),
-				SDK::Cached::VFT::GetViewpoint,
-				Hooks::GetViewpoint::GetViewpointOriginal,
-				Hooks::GetViewpoint::GetViewpoint);
+            Hooks::GetViewpoint::Hook = new Hooks::VFTHook(
+                *(void***)(LocalPlayer),
+                SDK::Cached::VFT::GetViewpoint,
+                Hooks::GetViewpoint::GetViewpointOriginal,
+                Hooks::GetViewpoint::GetViewpoint);
 
-			Hooks::GetViewpoint::LocalPlayerHooked = LocalPlayer;
-		}
-	}
-	else {
-		if (Hooks::GetPlayerViewpoint::Hook) {
-			delete Hooks::GetPlayerViewpoint::Hook;
-			Hooks::GetPlayerViewpoint::Hook = nullptr;
-			Hooks::GetPlayerViewpoint::PlayerControllerHooked = nullptr;
-		}
+            Hooks::GetViewpoint::LocalPlayerHooked = LocalPlayer;
+        }
+    }
+    else {
+        if (Hooks::GetPlayerViewpoint::Hook) {
+            delete Hooks::GetPlayerViewpoint::Hook;
+            Hooks::GetPlayerViewpoint::Hook = nullptr;
+            Hooks::GetPlayerViewpoint::PlayerControllerHooked = nullptr;
+        }
 
-		if (Hooks::GetViewpoint::Hook) {
-			delete Hooks::GetViewpoint::Hook;
-			Hooks::GetViewpoint::Hook = nullptr;
-			Hooks::GetViewpoint::LocalPlayerHooked = nullptr;
-		}
-	}
+        if (Hooks::GetViewpoint::Hook) {
+            delete Hooks::GetViewpoint::Hook;
+            Hooks::GetViewpoint::Hook = nullptr;
+            Hooks::GetViewpoint::LocalPlayerHooked = nullptr;
+        }
+    }
 
-	if (SDK::Cached::Functions::CalculateShot) {
-		if (Config::Aimbot::BulletTP && Hooks::CalculateShot::Hooked == false) {
-			Hooks::CalculateShot::Hooked = true;
+    if (SDK::Cached::Functions::CalculateShot) {
+        if (Config::Aimbot::BulletTP && Hooks::CalculateShot::Hooked == false) {
+            Hooks::CalculateShot::Hooked = true;
 
-			MH_STATUS CreateCalculateShotHook = MH_CreateHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()), &Hooks::CalculateShot::CalculateShot, (void**)&Hooks::CalculateShot::CalculateShotOriginal);
-			if (CreateCalculateShotHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook CalculateShot! Create Status: ")) + std::to_string(CreateCalculateShotHook));
-			}
+            MH_STATUS CreateCalculateShotHook = MH_CreateHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()), &Hooks::CalculateShot::CalculateShot, (void**)&Hooks::CalculateShot::CalculateShotOriginal);
+            if (CreateCalculateShotHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook CalculateShot! Create Status: ")) + std::to_string(CreateCalculateShotHook));
+            }
 
-			MH_STATUS EnableCalculateShotHook = MH_EnableHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()));
-			if (EnableCalculateShotHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook CalculateShot! Enable Status: ")) + std::to_string(EnableCalculateShotHook));
-			}
+            MH_STATUS EnableCalculateShotHook = MH_EnableHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()));
+            if (EnableCalculateShotHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook CalculateShot! Enable Status: ")) + std::to_string(EnableCalculateShotHook));
+            }
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked CalculateShot!")));
-		}
-		else if (Config::Aimbot::BulletTP == false && Hooks::CalculateShot::Hooked) {
-			Hooks::CalculateShot::Hooked = false;
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked CalculateShot!")));
+        }
+        else if (Config::Aimbot::BulletTP == false && Hooks::CalculateShot::Hooked) {
+            Hooks::CalculateShot::Hooked = false;
 
-			MH_STATUS DisableCalculateShotHook = MH_DisableHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()));
-			if (DisableCalculateShotHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook CalculateShot! Disable Status: ")) + std::to_string(DisableCalculateShotHook));
-			}
+            MH_STATUS DisableCalculateShotHook = MH_DisableHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()));
+            if (DisableCalculateShotHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook CalculateShot! Disable Status: ")) + std::to_string(DisableCalculateShotHook));
+            }
 
-			MH_STATUS RemoveCalculateShotHook = MH_RemoveHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()));
-			if (RemoveCalculateShotHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook CalculateShot! Remove Status: ")) + std::to_string(RemoveCalculateShotHook));
-			}
+            MH_STATUS RemoveCalculateShotHook = MH_RemoveHook((void*)(SDK::Cached::Functions::CalculateShot + SDK::GetBaseAddress()));
+            if (RemoveCalculateShotHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook CalculateShot! Remove Status: ")) + std::to_string(RemoveCalculateShotHook));
+            }
 
-			Hooks::CalculateShot::CalculateShotOriginal = nullptr;
+            Hooks::CalculateShot::CalculateShotOriginal = nullptr;
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked CalculateShot!")));
-		}
-	}
-	if (SDK::Cached::Functions::RaycastMulti) {
-		if (Config::Aimbot::BulletTPV2 && Hooks::RaycastMulti::Hooked == false) {
-			Hooks::RaycastMulti::Hooked = true;
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked CalculateShot!")));
+        }
+    }
 
-			MH_STATUS CreateRaycastMultiHook = MH_CreateHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()), &Hooks::RaycastMulti::RaycastMulti, (void**)&Hooks::RaycastMulti::RaycastMultiOriginal);
-			if (CreateRaycastMultiHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook RaycastMulti! Create Status: ")) + std::to_string(CreateRaycastMultiHook));
-			}
+    if (SDK::Cached::Functions::RaycastMulti) {
+        if (Config::Aimbot::BulletTPV2 && Hooks::RaycastMulti::Hooked == false) {
+            Hooks::RaycastMulti::Hooked = true;
 
-			MH_STATUS EnableRaycastMultiHook = MH_EnableHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()));
-			if (EnableRaycastMultiHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook RaycastMulti! Enable Status: ")) + std::to_string(EnableRaycastMultiHook));
-			}
+            MH_STATUS CreateRaycastMultiHook = MH_CreateHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()), &Hooks::RaycastMulti::RaycastMulti, (void**)&Hooks::RaycastMulti::RaycastMultiOriginal);
+            if (CreateRaycastMultiHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook RaycastMulti! Create Status: ")) + std::to_string(CreateRaycastMultiHook));
+            }
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked RaycastMulti!")));
-		}
-		else if (Config::Aimbot::BulletTPV2 == false && Hooks::RaycastMulti::Hooked) {
-			Hooks::RaycastMulti::Hooked = false;
+            MH_STATUS EnableRaycastMultiHook = MH_EnableHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()));
+            if (EnableRaycastMultiHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook RaycastMulti! Enable Status: ")) + std::to_string(EnableRaycastMultiHook));
+            }
 
-			MH_STATUS DisableRaycastMultiHook = MH_DisableHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()));
-			if (DisableRaycastMultiHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook RaycastMulti! Disable Status: ")) + std::to_string(DisableRaycastMultiHook));
-			}
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked RaycastMulti!")));
+        }
+        else if (Config::Aimbot::BulletTPV2 == false && Hooks::RaycastMulti::Hooked) {
+            Hooks::RaycastMulti::Hooked = false;
 
-			MH_STATUS RemoveRaycastMultiHook = MH_RemoveHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()));
-			if (RemoveRaycastMultiHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook RaycastMulti! Remove Status: ")) + std::to_string(RemoveRaycastMultiHook));
-			}
+            MH_STATUS DisableRaycastMultiHook = MH_DisableHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()));
+            if (DisableRaycastMultiHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook RaycastMulti! Disable Status: ")) + std::to_string(DisableRaycastMultiHook));
+            }
 
-			Hooks::RaycastMulti::RaycastMultiOriginal = nullptr;
+            MH_STATUS RemoveRaycastMultiHook = MH_RemoveHook((void*)(SDK::Cached::Functions::RaycastMulti + SDK::GetBaseAddress()));
+            if (RemoveRaycastMultiHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook RaycastMulti! Remove Status: ")) + std::to_string(RemoveRaycastMultiHook));
+            }
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked RaycastMulti!")));
-		}
-	}
-	if (SDK::Cached::Functions::EditSelectRelease) {
-		if (Config::Exploits::Player::EditOnRelease && Hooks::EditSelectRelease::Hooked == false) {
-			Hooks::EditSelectRelease::Hooked = true;
+            Hooks::RaycastMulti::RaycastMultiOriginal = nullptr;
 
-			MH_STATUS CreateEditSelectReleaseHook = MH_CreateHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()), &Hooks::EditSelectRelease::EditSelectRelease, (void**)&Hooks::EditSelectRelease::EditSelectReleaseOriginal);
-			if (CreateEditSelectReleaseHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook EditSelectRelease! Create Status: ")) + std::to_string(CreateEditSelectReleaseHook));
-			}
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked RaycastMulti!")));
+        }
+    }
 
-			MH_STATUS EnableEditSelectReleaseHook = MH_EnableHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()));
-			if (EnableEditSelectReleaseHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook EditSelectRelease! Enable Status: ")) + std::to_string(EnableEditSelectReleaseHook));
-			}
+    if (SDK::Cached::Functions::EditSelectRelease) {
+        if (Config::Exploits::Player::EditOnRelease && Hooks::EditSelectRelease::Hooked == false) {
+            Hooks::EditSelectRelease::Hooked = true;
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked EditSelectRelease!")));
-		}
-		else if (Config::Exploits::Player::EditOnRelease == false && Hooks::EditSelectRelease::Hooked) {
-			Hooks::EditSelectRelease::Hooked = false;
+            MH_STATUS CreateEditSelectReleaseHook = MH_CreateHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()), &Hooks::EditSelectRelease::EditSelectRelease, (void**)&Hooks::EditSelectRelease::EditSelectReleaseOriginal);
+            if (CreateEditSelectReleaseHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook EditSelectRelease! Create Status: ")) + std::to_string(CreateEditSelectReleaseHook));
+            }
 
-			MH_STATUS DisableEditSelectReleaseHook = MH_DisableHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()));
-			if (DisableEditSelectReleaseHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook EditSelectRelease! Disable Status: ")) + std::to_string(DisableEditSelectReleaseHook));
-			}
+            MH_STATUS EnableEditSelectReleaseHook = MH_EnableHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()));
+            if (EnableEditSelectReleaseHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook EditSelectRelease! Enable Status: ")) + std::to_string(EnableEditSelectReleaseHook));
+            }
 
-			MH_STATUS RemoveEditSelectReleaseHook = MH_RemoveHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()));
-			if (RemoveEditSelectReleaseHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook EditSelectRelease! Remove Status: ")) + std::to_string(RemoveEditSelectReleaseHook));
-			}
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked EditSelectRelease!")));
+        }
+        else if (Config::Exploits::Player::EditOnRelease == false && Hooks::EditSelectRelease::Hooked) {
+            Hooks::EditSelectRelease::Hooked = false;
 
-			Hooks::EditSelectRelease::EditSelectReleaseOriginal = nullptr;
+            MH_STATUS DisableEditSelectReleaseHook = MH_DisableHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()));
+            if (DisableEditSelectReleaseHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook EditSelectRelease! Disable Status: ")) + std::to_string(DisableEditSelectReleaseHook));
+            }
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked EditSelectRelease!")));
-		}
-	}
-	if (SDK::Cached::Functions::PerformBuildingEditInteraction) {
-		if (Config::Exploits::Player::DisablePreEdits && Hooks::PerformBuildingEditInteraction::Hooked == false) {
-			Hooks::PerformBuildingEditInteraction::Hooked = true;
+            MH_STATUS RemoveEditSelectReleaseHook = MH_RemoveHook((void*)(SDK::Cached::Functions::EditSelectRelease + SDK::GetBaseAddress()));
+            if (RemoveEditSelectReleaseHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook EditSelectRelease! Remove Status: ")) + std::to_string(RemoveEditSelectReleaseHook));
+            }
 
-			MH_STATUS CreatePerformBuildingEditInteractionHook = MH_CreateHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()), &Hooks::PerformBuildingEditInteraction::PerformBuildingEditInteraction, (void**)&Hooks::PerformBuildingEditInteraction::PerformBuildingEditInteractionOriginal);
-			if (CreatePerformBuildingEditInteractionHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook PerformBuildingEditInteraction! Create Status: ")) + std::to_string(CreatePerformBuildingEditInteractionHook));
-			}
+            Hooks::EditSelectRelease::EditSelectReleaseOriginal = nullptr;
 
-			MH_STATUS EnablePerformBuildingEditInteractionHook = MH_EnableHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()));
-			if (EnablePerformBuildingEditInteractionHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook PerformBuildingEditInteraction! Enable Status: ")) + std::to_string(EnablePerformBuildingEditInteractionHook));
-			}
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked EditSelectRelease!")));
+        }
+    }
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked PerformBuildingEditInteraction!")));
-		}
-		else if (Config::Exploits::Player::DisablePreEdits == false && Hooks::PerformBuildingEditInteraction::Hooked) {
-			Hooks::PerformBuildingEditInteraction::Hooked = false;
+    if (SDK::Cached::Functions::PerformBuildingEditInteraction) {
+        if (Config::Exploits::Player::DisablePreEdits && Hooks::PerformBuildingEditInteraction::Hooked == false) {
+            Hooks::PerformBuildingEditInteraction::Hooked = true;
 
-			MH_STATUS DisablePerformBuildingEditInteractionHook = MH_DisableHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()));
-			if (DisablePerformBuildingEditInteractionHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook PerformBuildingEditInteraction! Disable Status: ")) + std::to_string(DisablePerformBuildingEditInteractionHook));
-			}
+            MH_STATUS CreatePerformBuildingEditInteractionHook = MH_CreateHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()), &Hooks::PerformBuildingEditInteraction::PerformBuildingEditInteraction, (void**)&Hooks::PerformBuildingEditInteraction::PerformBuildingEditInteractionOriginal);
+            if (CreatePerformBuildingEditInteractionHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook PerformBuildingEditInteraction! Create Status: ")) + std::to_string(CreatePerformBuildingEditInteractionHook));
+            }
 
-			MH_STATUS RemovePerformBuildingEditInteractionHook = MH_RemoveHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()));
-			if (RemovePerformBuildingEditInteractionHook != MH_OK) {
-				DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook PerformBuildingEditInteraction! Remove Status: ")) + std::to_string(RemovePerformBuildingEditInteractionHook));
-			}
+            MH_STATUS EnablePerformBuildingEditInteractionHook = MH_EnableHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()));
+            if (EnablePerformBuildingEditInteractionHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to hook PerformBuildingEditInteraction! Enable Status: ")) + std::to_string(EnablePerformBuildingEditInteractionHook));
+            }
 
-			Hooks::PerformBuildingEditInteraction::PerformBuildingEditInteractionOriginal = nullptr;
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Hooked PerformBuildingEditInteraction!")));
+        }
+        else if (Config::Exploits::Player::DisablePreEdits == false && Hooks::PerformBuildingEditInteraction::Hooked) {
+            Hooks::PerformBuildingEditInteraction::Hooked = false;
 
-			DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked PerformBuildingEditInteraction!")));
-		}
-	}
+            MH_STATUS DisablePerformBuildingEditInteractionHook = MH_DisableHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()));
+            if (DisablePerformBuildingEditInteractionHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook PerformBuildingEditInteraction! Disable Status: ")) + std::to_string(DisablePerformBuildingEditInteractionHook));
+            }
+
+            MH_STATUS RemovePerformBuildingEditInteractionHook = MH_RemoveHook((void*)(SDK::Cached::Functions::PerformBuildingEditInteraction + SDK::GetBaseAddress()));
+            if (RemovePerformBuildingEditInteractionHook != MH_OK) {
+                DEBUG_LOG(LOG_ERROR, std::string(skCrypt("Failed to unhook PerformBuildingEditInteraction! Remove Status: ")) + std::to_string(RemovePerformBuildingEditInteractionHook));
+            }
+
+            Hooks::PerformBuildingEditInteraction::PerformBuildingEditInteractionOriginal = nullptr;
+
+            DEBUG_LOG(LOG_INFO, std::string(skCrypt("Unhooked PerformBuildingEditInteraction!")));
+        }
+    }
 }
